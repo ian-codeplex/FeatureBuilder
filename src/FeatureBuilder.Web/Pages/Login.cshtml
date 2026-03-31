@@ -1,0 +1,78 @@
+@page
+@model FeatureBuilder.Web.Pages.LoginModel
+@{
+    ViewData["Title"] = "Sign In";
+    Layout = "_Layout";
+}
+
+<div class="min-h-[70vh] flex items-center justify-center">
+    <div class="max-w-md w-full">
+        <div class="card p-8 text-center">
+            <div class="flex justify-center mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-16 h-16 text-github">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.749 0 .268.18.58.688.482A10.019 10.019 0 0022 12c0-5.523-4.477-10-10-10z"/>
+                </svg>
+            </div>
+
+            <h1 class="text-2xl font-bold text-github mb-2">Welcome to FeatureBuilder</h1>
+            <p class="text-gray-500 mb-8">
+                Sign in with your GitHub account to manage and create issues across your repositories.
+            </p>
+
+            @if (!Model.IsGitHubConfigured)
+            {
+                <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left">
+                    <p class="text-sm font-semibold text-amber-800 mb-2">⚙️ Configuration Required</p>
+                    <p class="text-sm text-amber-700 mb-3">
+                        GitHub OAuth credentials are not configured. Add the following to your <code class="bg-amber-100 px-1 rounded">appsettings.json</code> or environment variables:
+                    </p>
+                    <pre class="text-xs bg-amber-100 p-2 rounded overflow-x-auto text-amber-900">{
+  "GitHub": {
+    "ClientId": "your-github-client-id",
+    "ClientSecret": "your-github-client-secret"
+  }
+}</pre>
+                    <p class="text-xs text-amber-600 mt-2">
+                        Create a GitHub OAuth App at <a href="https://github.com/settings/applications/new" target="_blank" class="underline">github.com/settings/applications/new</a>
+                    </p>
+                </div>
+            }
+
+            <a href="/challenge-github?returnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/Dashboard")"
+               class="inline-flex items-center justify-center space-x-3 w-full @(Model.IsGitHubConfigured ? "bg-github hover:bg-github-dark" : "bg-gray-400 cursor-not-allowed") text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+               @(!Model.IsGitHubConfigured ? "onclick=\"return false;\"" : "")>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.749 0 .268.18.58.688.482A10.019 10.019 0 0022 12c0-5.523-4.477-10-10-10z"/>
+                </svg>
+                <span>Sign in with GitHub</span>
+            </a>
+
+            @if (Model.IsGitHubConfigured)
+            {
+                <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
+                    <p class="text-sm font-semibold text-blue-800 mb-2">Permissions requested:</p>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Read your profile information</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Access your repositories (public &amp; private)</span>
+                        </li>
+                        <li class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Create and manage issues</span>
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>
