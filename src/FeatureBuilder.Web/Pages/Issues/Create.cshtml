@@ -235,6 +235,29 @@
 
 @section Scripts {
 <script>
+    // Store for extracted attachment texts (WeakMap: button element -> text)
+    const attachmentTextStore = new WeakMap();
+
+    // Delegated event listener for 'Add to Description' buttons
+    document.addEventListener('click', function(e) {
+        const resultBtn = e.target.closest('.result-add-btn');
+        if (resultBtn) {
+            const containerId = resultBtn.getAttribute('data-result-container');
+            appendToDescription(containerId);
+        }
+        const attachBtn = e.target.closest('.attach-add-btn');
+        if (attachBtn) {
+            const text = attachmentTextStore.get(attachBtn);
+            if (text) {
+                const body = document.getElementById('Body');
+                const separator = body.value ? '\n\n---\n\n**Extracted from attachment:**\n\n' : '**Extracted from attachment:**\n\n';
+                body.value += separator + text;
+                attachBtn.textContent = '✓ Added';
+                attachBtn.disabled = true;
+            }
+        }
+    });
+
     // --- Tab management ---
     function showTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
@@ -267,8 +290,8 @@
             <div class="p-4 rounded-lg border ${colorClass} text-sm">
                 <div class="flex items-start justify-between">
                     <div class="prose prose-sm max-w-none flex-1">${markdownToHtml(content)}</div>
-                    ${!isError ? `<button type="button" onclick="appendToDescription('${containerId}')" 
-                        class="ml-3 flex-shrink-0 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors">
+                    ${!isError ? `<button type="button" data-result-container="${containerId}"
+                        class="result-add-btn ml-3 flex-shrink-0 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors">
                         Add to Description
                     </button>` : ''}
                 </div>
@@ -425,7 +448,7 @@
         list.classList.remove('hidden');
 
         for (const file of files) {
-            const itemId = 'attach_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const itemId = 'attach_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
             const item = document.createElement('div');
             item.id = itemId;
             item.className = 'flex items-center space-x-3 p-3 bg-gray-50 border border-github-border rounded-lg text-sm';
@@ -454,9 +477,13 @@
                 const data = await response.json();
                 const statusEl = item.querySelector('.flex-shrink-0.text-xs');
                 if (data.success && data.text) {
-                    statusEl.innerHTML = `<button type="button" onclick="appendTextToDescription(this)" 
-                        data-text="${encodeURIComponent(data.text)}"
-                        class="text-purple-600 hover:text-purple-800 font-medium">Add to description</button>`;
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'attach-add-btn text-purple-600 hover:text-purple-800 font-medium';
+                    addBtn.textContent = 'Add to description';
+                    attachmentTextStore.set(addBtn, data.text);
+                    statusEl.innerHTML = '';
+                    statusEl.appendChild(addBtn);
                 } else {
                     statusEl.innerHTML = `<span class="text-red-500">Failed to extract</span>`;
                 }
@@ -465,15 +492,6 @@
                 statusEl.innerHTML = `<span class="text-red-500">Error</span>`;
             }
         }
-    }
-
-    function appendTextToDescription(btn) {
-        const text = decodeURIComponent(btn.getAttribute('data-text'));
-        const body = document.getElementById('Body');
-        const separator = body.value ? '\n\n---\n\n**Extracted from attachment:**\n\n' : '**Extracted from attachment:**\n\n';
-        body.value += separator + text;
-        btn.textContent = '✓ Added';
-        btn.disabled = true;
     }
 
     // --- Anti-forgery token helper ---
