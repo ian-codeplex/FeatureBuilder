@@ -46,8 +46,25 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <p class="text-yellow-800 text-sm">
-                <strong>AI features are disabled.</strong> Add <code class="bg-yellow-100 px-1 rounded">OpenAI:ApiKey</code> to your configuration to enable AI-powered description improvement, Q&amp;A, and image analysis.
+                <strong>AI features are disabled.</strong> Set <code class="bg-yellow-100 px-1 rounded">AI:Provider</code> and <code class="bg-yellow-100 px-1 rounded">AI:ApiKey</code> in your configuration to enable AI assistance.
             </p>
+        </div>
+    }
+    else
+    {
+        <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center space-x-2 text-sm">
+            <svg class="w-4 h-4 text-purple-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.001 3.001 0 00-.703 1.674v.25c0 .414-.336.75-.75.75h-2.5a.75.75 0 01-.75-.75v-.25a3 3 0 00-.703-1.674l-.347-.347z"/>
+            </svg>
+            <span class="text-purple-700">AI powered by <strong>@Model.AiProviderName</strong></span>
+            @if (Model.AiSupportsImages)
+            {
+                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">🖼️ Vision enabled</span>
+            }
+            else
+            {
+                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Image analysis unavailable for this model</span>
+            }
         </div>
     }
 
@@ -128,6 +145,10 @@
                 {
                     <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Not Configured</span>
                 }
+                else
+                {
+                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">@Model.AiProviderName</span>
+                }
             </h2>
 
             <!-- Tab navigation -->
@@ -163,6 +184,12 @@
 
             <!-- Image Analysis Tab -->
             <div id="tabImage" class="tab-content hidden space-y-3">
+                @if (!Model.AiSupportsImages && Model.IsAiConfigured)
+                {
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        ⚠️ The current model (<strong>@Model.AiProviderName</strong>) does not support image analysis. Switch to a vision-capable model (e.g. <code class="bg-amber-100 px-1 rounded">gpt-4o</code>, <code class="bg-amber-100 px-1 rounded">claude-3-5-sonnet-20241022</code>, or <code class="bg-amber-100 px-1 rounded">llava</code>) to enable this feature.
+                    </div>
+                }
                 <p class="text-sm text-gray-600">Upload a screenshot or image related to the issue. AI will analyze it and suggest content for your description.</p>
                 <div id="imageDropZone" 
                      class="border-2 border-dashed border-github-border rounded-lg p-8 text-center cursor-pointer hover:border-github-blue hover:bg-blue-50 transition-colors"
@@ -177,8 +204,8 @@
                 <div id="imagePreviewContainer" class="hidden">
                     <img id="imagePreview" class="max-h-48 rounded-lg border border-github-border" />
                     <button type="button" onclick="analyzeImage()"
-                            class="mt-2 inline-flex items-center space-x-2 btn-primary text-sm @(!Model.IsAiConfigured ? "opacity-50 cursor-not-allowed" : "")"
-                            @(!Model.IsAiConfigured ? "disabled" : "")>
+                            class="mt-2 inline-flex items-center space-x-2 btn-primary text-sm @(!Model.IsAiConfigured || !Model.AiSupportsImages ? "opacity-50 cursor-not-allowed" : "")"
+                            @(!Model.IsAiConfigured || !Model.AiSupportsImages ? "disabled" : "")>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>

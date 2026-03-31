@@ -10,12 +10,14 @@ namespace FeatureBuilder.Web.Pages.Issues;
 public class CreateModel : PageModel
 {
     private readonly IGitHubService _gitHubService;
-    private readonly IOpenAIService _openAIService;
+    private readonly IAiService _aiService;
     private readonly IFileParsingService _fileParsingService;
     private readonly ILogger<CreateModel> _logger;
 
     public List<RepositoryViewModel> Repositories { get; private set; } = new();
     public bool IsAiConfigured { get; private set; }
+    public bool AiSupportsImages { get; private set; }
+    public string AiProviderName { get; private set; } = string.Empty;
 
     [BindProperty]
     public CreateIssueModel Input { get; set; } = new();
@@ -28,12 +30,12 @@ public class CreateModel : PageModel
 
     public CreateModel(
         IGitHubService gitHubService,
-        IOpenAIService openAIService,
+        IAiService aiService,
         IFileParsingService fileParsingService,
         ILogger<CreateModel> logger)
     {
         _gitHubService = gitHubService;
-        _openAIService = openAIService;
+        _aiService = aiService;
         _fileParsingService = fileParsingService;
         _logger = logger;
     }
@@ -44,7 +46,7 @@ public class CreateModel : PageModel
         if (string.IsNullOrEmpty(accessToken))
             return RedirectToPage("/Login");
 
-        IsAiConfigured = _openAIService.IsConfigured;
+        PopulateAiInfo();
         Repositories = (await _gitHubService.GetUserRepositoriesAsync(accessToken))
             .Where(r => r.HasIssues)
             .ToList();
@@ -61,7 +63,7 @@ public class CreateModel : PageModel
         if (string.IsNullOrEmpty(accessToken))
             return RedirectToPage("/Login");
 
-        IsAiConfigured = _openAIService.IsConfigured;
+        PopulateAiInfo();
         Repositories = (await _gitHubService.GetUserRepositoriesAsync(accessToken))
             .Where(r => r.HasIssues)
             .ToList();
@@ -103,5 +105,12 @@ public class CreateModel : PageModel
         }
 
         return Page();
+    }
+
+    private void PopulateAiInfo()
+    {
+        IsAiConfigured = _aiService.IsConfigured;
+        AiSupportsImages = _aiService.SupportsImageAnalysis;
+        AiProviderName = _aiService.ProviderDisplayName;
     }
 }

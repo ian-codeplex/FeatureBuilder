@@ -10,12 +10,12 @@ namespace FeatureBuilder.Web.Controllers;
 [Authorize]
 public class AiController : ControllerBase
 {
-    private readonly IOpenAIService _openAIService;
+    private readonly IAiService _aiService;
     private readonly ILogger<AiController> _logger;
 
-    public AiController(IOpenAIService openAIService, ILogger<AiController> logger)
+    public AiController(IAiService aiService, ILogger<AiController> logger)
     {
-        _openAIService = openAIService;
+        _aiService = aiService;
         _logger = logger;
     }
 
@@ -26,7 +26,7 @@ public class AiController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Title))
             return BadRequest(new AiResponse { Success = false, Error = "Title is required." });
 
-        var result = await _openAIService.ImproveIssueDescriptionAsync(request);
+        var result = await _aiService.ImproveIssueDescriptionAsync(request);
         return Ok(result);
     }
 
@@ -37,7 +37,7 @@ public class AiController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Question))
             return BadRequest(new AiResponse { Success = false, Error = "Question is required." });
 
-        var result = await _openAIService.AnswerQuestionAsync(request);
+        var result = await _aiService.AnswerQuestionAsync(request);
         return Ok(result);
     }
 
@@ -48,7 +48,7 @@ public class AiController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.ImageBase64))
             return BadRequest(new AiResponse { Success = false, Error = "Image data is required." });
 
-        var result = await _openAIService.AnalyzeImageAsync(request);
+        var result = await _aiService.AnalyzeImageAsync(request);
         return Ok(result);
     }
 }

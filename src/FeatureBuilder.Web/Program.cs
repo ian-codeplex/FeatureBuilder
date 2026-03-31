@@ -26,7 +26,7 @@ builder.Services.AddSession(options =>
 // Register application services
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IGitHubService, GitHubService>();
-builder.Services.AddScoped<IOpenAIService, OpenAIService>();
+builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddScoped<IFileParsingService, FileParsingService>();
 
 var gitHubClientId = builder.Configuration["GitHub:ClientId"] ?? string.Empty;
