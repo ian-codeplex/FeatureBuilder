@@ -1,0 +1,540 @@
+@page
+@model FeatureBuilder.Web.Pages.Issues.CreateModel
+@{
+    ViewData["Title"] = "Create Issue";
+}
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div>
+        <nav class="text-sm text-gray-500 mb-2">
+            <a asp-page="/Dashboard" class="hover:text-github-blue">Dashboard</a>
+            <span class="mx-2">/</span>
+            <span class="text-github">Create Issue</span>
+        </nav>
+        <h1 class="text-2xl font-bold text-github">Create New Issue</h1>
+        <p class="text-gray-500 mt-1">Use AI to help craft a clear and comprehensive issue</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-3">
+            <svg class="w-5 h-5 text-github-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="font-medium text-green-800">Issue created successfully!</p>
+                <p class="text-sm text-green-700 mt-1">@Html.Raw(Model.SuccessMessage)</p>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
+            <svg class="w-5 h-5 text-github-red flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-red-700">@Model.ErrorMessage</p>
+        </div>
+    }
+
+    @if (!Model.IsAiConfigured)
+    {
+        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-3">
+            <svg class="w-5 h-5 text-yellow-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-yellow-800 text-sm">
+                <strong>AI features are disabled.</strong> Set <code class="bg-yellow-100 px-1 rounded">AI:Provider</code> and <code class="bg-yellow-100 px-1 rounded">AI:ApiKey</code> in your configuration to enable AI assistance.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center space-x-2 text-sm">
+            <svg class="w-4 h-4 text-purple-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.001 3.001 0 00-.703 1.674v.25c0 .414-.336.75-.75.75h-2.5a.75.75 0 01-.75-.75v-.25a3 3 0 00-.703-1.674l-.347-.347z"/>
+            </svg>
+            <span class="text-purple-700">AI powered by <strong>@Model.AiProviderName</strong></span>
+            @if (Model.AiSupportsImages)
+            {
+                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">🖼️ Vision enabled</span>
+            }
+            else
+            {
+                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Image analysis unavailable for this model</span>
+            }
+        </div>
+    }
+
+    <form method="post" enctype="multipart/form-data" id="issueForm" class="space-y-6">
+        @Html.AntiForgeryToken()
+
+        <!-- Repository Selection -->
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-github mb-4 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+                <span>Repository</span>
+            </h2>
+            <div>
+                <label for="RepositoryFullName" class="form-label">Select Repository *</label>
+                <select id="RepositoryFullName" name="RepositoryFullName" class="form-input" required>
+                    <option value="">-- Select a repository --</option>
+                    @foreach (var repo in Model.Repositories)
+                    {
+                        <option value="@repo.FullName" data-has-issues="@repo.HasIssues.ToString().ToLower()"
+                                selected="@(repo.FullName == Model.Input.RepositoryFullName ? "selected" : null)">
+                            @repo.FullName @(repo.IsPrivate ? "🔒" : "") @(!repo.HasIssues ? "(issues disabled)" : "")
+                        </option>
+                    }
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Showing repositories you have access to</p>
+            </div>
+        </div>
+
+        <!-- Issue Details -->
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-github mb-4 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                <span>Issue Details</span>
+            </h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="Title" class="form-label">Title *</label>
+                    <input type="text" id="Title" name="Title" value="@Model.Input.Title"
+                           class="form-input" placeholder="Brief, descriptive title" required maxlength="256" />
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="Body" class="form-label mb-0">Description</label>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" id="btnImprove" onclick="improveDescription()"
+                                    class="inline-flex items-center space-x-1.5 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-md font-medium transition-colors @(!Model.IsAiConfigured ? "opacity-50 cursor-not-allowed" : "")"
+                                    @(!Model.IsAiConfigured ? "disabled" : "")
+                                    title="@(!Model.IsAiConfigured ? "AI not configured" : "Improve description with AI")">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.001 3.001 0 00-.703 1.674v.25c0 .414-.336.75-.75.75h-2.5a.75.75 0 01-.75-.75v-.25a3 3 0 00-.703-1.674l-.347-.347z"/>
+                                </svg>
+                                <span>AI Improve</span>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="Body" name="Body" rows="10"
+                              class="form-input font-mono text-sm" 
+                              placeholder="Describe the issue in detail. Supports Markdown.">@Model.Input.Body</textarea>
+                    <p class="text-xs text-gray-500 mt-1">Markdown supported. Use the AI tools below to enhance your description.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Features Panel -->
+        <div class="card p-6 border-l-4 border-l-purple-400">
+            <h2 class="text-lg font-semibold text-github mb-4 flex items-center space-x-2">
+                <svg class="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.001 3.001 0 00-.703 1.674v.25c0 .414-.336.75-.75.75h-2.5a.75.75 0 01-.75-.75v-.25a3 3 0 00-.703-1.674l-.347-.347z"/>
+                </svg>
+                <span>AI Assistant</span>
+                @if (!Model.IsAiConfigured)
+                {
+                    <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Not Configured</span>
+                }
+                else
+                {
+                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">@Model.AiProviderName</span>
+                }
+            </h2>
+
+            <!-- Tab navigation -->
+            <div class="flex space-x-1 mb-4 bg-gray-100 p-1 rounded-lg">
+                <button type="button" onclick="showTab('tabQA')" id="tabBtnQA"
+                        class="tab-btn flex-1 text-sm py-1.5 px-3 rounded-md font-medium transition-colors bg-white shadow text-github">
+                    💬 Q&amp;A Assistant
+                </button>
+                <button type="button" onclick="showTab('tabImage')" id="tabBtnImage"
+                        class="tab-btn flex-1 text-sm py-1.5 px-3 rounded-md font-medium transition-colors text-gray-500 hover:text-github">
+                    🖼️ Image Analysis
+                </button>
+                <button type="button" onclick="showTab('tabAttachment')" id="tabBtnAttachment"
+                        class="tab-btn flex-1 text-sm py-1.5 px-3 rounded-md font-medium transition-colors text-gray-500 hover:text-github">
+                    📎 Attachments
+                </button>
+            </div>
+
+            <!-- Q&A Tab -->
+            <div id="tabQA" class="tab-content space-y-3">
+                <p class="text-sm text-gray-600">Ask questions to get suggestions for elaborating on your issue, based on the repository context.</p>
+                <div class="flex space-x-2">
+                    <input type="text" id="questionInput" placeholder="e.g. What steps should I include to reproduce this?"
+                           class="form-input flex-1 text-sm" />
+                    <button type="button" onclick="askQuestion()"
+                            class="inline-flex items-center space-x-1.5 btn-primary text-sm py-2 whitespace-nowrap @(!Model.IsAiConfigured ? "opacity-50 cursor-not-allowed" : "")"
+                            @(!Model.IsAiConfigured ? "disabled" : "")>
+                        <span>Ask AI</span>
+                    </button>
+                </div>
+                <div id="qaResponse" class="hidden"></div>
+            </div>
+
+            <!-- Image Analysis Tab -->
+            <div id="tabImage" class="tab-content hidden space-y-3">
+                @if (!Model.AiSupportsImages && Model.IsAiConfigured)
+                {
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        ⚠️ The current model (<strong>@Model.AiProviderName</strong>) does not support image analysis. Switch to a vision-capable model (e.g. <code class="bg-amber-100 px-1 rounded">gpt-4o</code>, <code class="bg-amber-100 px-1 rounded">claude-3-5-sonnet-20241022</code>, or <code class="bg-amber-100 px-1 rounded">llava</code>) to enable this feature.
+                    </div>
+                }
+                <p class="text-sm text-gray-600">Upload a screenshot or image related to the issue. AI will analyze it and suggest content for your description.</p>
+                <div id="imageDropZone" 
+                     class="border-2 border-dashed border-github-border rounded-lg p-8 text-center cursor-pointer hover:border-github-blue hover:bg-blue-50 transition-colors"
+                     ondragover="handleDragOver(event)" ondrop="handleImageDrop(event)" onclick="document.getElementById('imageFileInput').click()">
+                    <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="text-sm text-gray-500">Drag and drop an image here, or click to browse</p>
+                    <p class="text-xs text-gray-400 mt-1">PNG, JPG, GIF, WebP up to 10MB</p>
+                    <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageFile(this)" />
+                </div>
+                <div id="imagePreviewContainer" class="hidden">
+                    <img id="imagePreview" class="max-h-48 rounded-lg border border-github-border" />
+                    <button type="button" onclick="analyzeImage()"
+                            class="mt-2 inline-flex items-center space-x-2 btn-primary text-sm @(!Model.IsAiConfigured || !Model.AiSupportsImages ? "opacity-50 cursor-not-allowed" : "")"
+                            @(!Model.IsAiConfigured || !Model.AiSupportsImages ? "disabled" : "")>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        <span>Analyze Image</span>
+                    </button>
+                </div>
+                <div id="imageAnalysisResponse" class="hidden"></div>
+            </div>
+
+            <!-- Attachments Tab -->
+            <div id="tabAttachment" class="tab-content hidden space-y-3">
+                <p class="text-sm text-gray-600">Upload Word documents, PDFs, or text files. Their content will be extracted and added to the issue description.</p>
+                <div id="attachDropZone"
+                     class="border-2 border-dashed border-github-border rounded-lg p-8 text-center cursor-pointer hover:border-github-blue hover:bg-blue-50 transition-colors"
+                     ondragover="handleDragOver(event)" ondrop="handleAttachmentDrop(event)" onclick="document.getElementById('attachmentInput').click()">
+                    <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-sm text-gray-500">Drag and drop files here, or click to browse</p>
+                    <p class="text-xs text-gray-400 mt-1">PDF, DOCX, TXT, MD, CSV, JSON, XML, YAML up to 10MB</p>
+                    <input type="file" id="attachmentInput" name="Attachments" multiple
+                           accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.xml,.yaml,.yml"
+                           class="hidden" onchange="handleAttachmentFiles(this)" />
+                </div>
+                <div id="attachmentList" class="space-y-2 hidden"></div>
+                <div id="attachmentResponse" class="hidden"></div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex items-center justify-between">
+            <a asp-page="/Dashboard" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Create Issue</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading spinner template -->
+<template id="spinnerTemplate">
+    <div class="flex items-center space-x-2 text-sm text-gray-500 p-3">
+        <svg class="animate-spin h-4 w-4 text-github-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>AI is thinking...</span>
+    </div>
+</template>
+
+@section Scripts {
+<script>
+    // Store for extracted attachment texts (WeakMap: button element -> text)
+    const attachmentTextStore = new WeakMap();
+
+    // Delegated event listener for 'Add to Description' buttons
+    document.addEventListener('click', function(e) {
+        const resultBtn = e.target.closest('.result-add-btn');
+        if (resultBtn) {
+            const containerId = resultBtn.getAttribute('data-result-container');
+            appendToDescription(containerId);
+        }
+        const attachBtn = e.target.closest('.attach-add-btn');
+        if (attachBtn) {
+            const text = attachmentTextStore.get(attachBtn);
+            if (text) {
+                const body = document.getElementById('Body');
+                const separator = body.value ? '\n\n---\n\n**Extracted from attachment:**\n\n' : '**Extracted from attachment:**\n\n';
+                body.value += separator + text;
+                attachBtn.textContent = '✓ Added';
+                attachBtn.disabled = true;
+            }
+        }
+    });
+
+    // --- Tab management ---
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('bg-white', 'shadow', 'text-github');
+            b.classList.add('text-gray-500');
+        });
+        document.getElementById(tabId).classList.remove('hidden');
+        const btnId = 'tabBtn' + tabId.replace('tab', '');
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.classList.add('bg-white', 'shadow', 'text-github');
+            btn.classList.remove('text-gray-500');
+        }
+    }
+
+    // --- Helper: show spinner ---
+    function showSpinner(containerId) {
+        const container = document.getElementById(containerId);
+        container.classList.remove('hidden');
+        container.innerHTML = document.getElementById('spinnerTemplate').innerHTML;
+    }
+
+    // --- Helper: show AI result ---
+    function showResult(containerId, content, isError = false) {
+        const container = document.getElementById(containerId);
+        container.classList.remove('hidden');
+        const colorClass = isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-purple-50 border-purple-200 text-gray-800';
+        container.innerHTML = `
+            <div class="p-4 rounded-lg border ${colorClass} text-sm">
+                <div class="flex items-start justify-between">
+                    <div class="prose prose-sm max-w-none flex-1">${markdownToHtml(content)}</div>
+                    ${!isError ? `<button type="button" data-result-container="${containerId}"
+                        class="result-add-btn ml-3 flex-shrink-0 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors">
+                        Add to Description
+                    </button>` : ''}
+                </div>
+            </div>`;
+    }
+
+    // Simple markdown to HTML (basic)
+    function markdownToHtml(text) {
+        return text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1 rounded text-xs">$1</code>')
+            .replace(/^### (.+)/gm, '<h3 class="font-semibold text-sm mt-2">$1</h3>')
+            .replace(/^## (.+)/gm, '<h2 class="font-semibold mt-3">$1</h2>')
+            .replace(/^# (.+)/gm, '<h1 class="font-bold text-lg mt-3">$1</h1>')
+            .replace(/^- (.+)/gm, '<li class="ml-4 list-disc">$1</li>')
+            .replace(/\n\n/g, '</p><p class="mt-2">')
+            .replace(/\n/g, '<br/>');
+    }
+
+    // Append AI result to description
+    const aiResponses = {};
+    function appendToDescription(containerId) {
+        const rawContent = aiResponses[containerId];
+        if (!rawContent) return;
+        const body = document.getElementById('Body');
+        body.value = (body.value ? body.value + '\n\n---\n\n' : '') + rawContent;
+    }
+
+    // --- AI: Improve description ---
+    async function improveDescription() {
+        const repo = document.getElementById('RepositoryFullName').value;
+        const title = document.getElementById('Title').value;
+        const body = document.getElementById('Body').value;
+
+        if (!title.trim()) { alert('Please enter a title first.'); return; }
+
+        // Show loading in button
+        const btn = document.getElementById('btnImprove');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-3.5 w-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Improving...';
+
+        try {
+            const response = await fetch('/api/ai/improve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getAntiForgeryToken() },
+                body: JSON.stringify({ repositoryFullName: repo, title, body })
+            });
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('Body').value = data.content;
+                showToast('✨ Description improved by AI!', 'success');
+            } else {
+                showToast('AI error: ' + data.error, 'error');
+            }
+        } catch (e) {
+            showToast('Failed to connect to AI service', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        }
+    }
+
+    // --- AI: Ask question ---
+    async function askQuestion() {
+        const question = document.getElementById('questionInput').value.trim();
+        if (!question) { alert('Please enter a question.'); return; }
+
+        showSpinner('qaResponse');
+        try {
+            const response = await fetch('/api/ai/question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getAntiForgeryToken() },
+                body: JSON.stringify({
+                    repositoryFullName: document.getElementById('RepositoryFullName').value,
+                    question,
+                    issueTitle: document.getElementById('Title').value,
+                    issueBody: document.getElementById('Body').value
+                })
+            });
+            const data = await response.json();
+            aiResponses['qaResponse'] = data.content;
+            showResult('qaResponse', data.success ? data.content : data.error, !data.success);
+        } catch (e) {
+            showResult('qaResponse', 'Failed to connect to AI service', true);
+        }
+    }
+
+    // --- Image handling ---
+    let imageBase64 = null;
+    let imageMimeType = null;
+
+    function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('border-github-blue', 'bg-blue-50'); }
+
+    function handleImageDrop(e) {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) loadImageFile(file);
+    }
+
+    function handleImageFile(input) {
+        if (input.files[0]) loadImageFile(input.files[0]);
+    }
+
+    function loadImageFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const result = e.target.result;
+            imageBase64 = result.split(',')[1];
+            imageMimeType = file.type;
+            document.getElementById('imagePreview').src = result;
+            document.getElementById('imagePreviewContainer').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function analyzeImage() {
+        if (!imageBase64) { alert('Please select an image first.'); return; }
+        showSpinner('imageAnalysisResponse');
+        try {
+            const response = await fetch('/api/ai/analyze-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getAntiForgeryToken() },
+                body: JSON.stringify({
+                    repositoryFullName: document.getElementById('RepositoryFullName').value,
+                    issueTitle: document.getElementById('Title').value,
+                    issueBody: document.getElementById('Body').value,
+                    imageBase64,
+                    mimeType: imageMimeType
+                })
+            });
+            const data = await response.json();
+            aiResponses['imageAnalysisResponse'] = data.content;
+            showResult('imageAnalysisResponse', data.success ? data.content : data.error, !data.success);
+        } catch (e) {
+            showResult('imageAnalysisResponse', 'Failed to connect to AI service', true);
+        }
+    }
+
+    // --- Attachment handling ---
+    function handleAttachmentDrop(e) {
+        e.preventDefault();
+        handleAttachmentFilesArray(Array.from(e.dataTransfer.files));
+    }
+
+    function handleAttachmentFiles(input) {
+        handleAttachmentFilesArray(Array.from(input.files));
+    }
+
+    async function handleAttachmentFilesArray(files) {
+        const list = document.getElementById('attachmentList');
+        list.classList.remove('hidden');
+
+        for (const file of files) {
+            const itemId = 'attach_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+            const item = document.createElement('div');
+            item.id = itemId;
+            item.className = 'flex items-center space-x-3 p-3 bg-gray-50 border border-github-border rounded-lg text-sm';
+            item.innerHTML = `
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-github truncate">${file.name}</p>
+                    <p class="text-gray-400 text-xs">${(file.size / 1024).toFixed(1)} KB</p>
+                </div>
+                <div class="flex-shrink-0 text-xs">
+                    <span class="text-blue-600 animate-pulse">Extracting text...</span>
+                </div>`;
+            list.appendChild(item);
+
+            // Upload and extract text
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch('/api/attachment/extract', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': getAntiForgeryToken() },
+                    body: formData
+                });
+                const data = await response.json();
+                const statusEl = item.querySelector('.flex-shrink-0.text-xs');
+                if (data.success && data.text) {
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'attach-add-btn text-purple-600 hover:text-purple-800 font-medium';
+                    addBtn.textContent = 'Add to description';
+                    attachmentTextStore.set(addBtn, data.text);
+                    statusEl.innerHTML = '';
+                    statusEl.appendChild(addBtn);
+                } else {
+                    statusEl.innerHTML = `<span class="text-red-500">Failed to extract</span>`;
+                }
+            } catch (e) {
+                const statusEl = item.querySelector('.flex-shrink-0.text-xs');
+                statusEl.innerHTML = `<span class="text-red-500">Error</span>`;
+            }
+        }
+    }
+
+    // --- Anti-forgery token helper ---
+    function getAntiForgeryToken() {
+        const el = document.querySelector('input[name="__RequestVerificationToken"]');
+        return el ? el.value : '';
+    }
+
+    // --- Toast notification ---
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+        toast.className = `fixed top-4 right-4 ${colors[type] || colors.info} text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium z-50 transition-all`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+</script>
+}
